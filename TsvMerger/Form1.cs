@@ -16,6 +16,7 @@ namespace TsvMerger
     public partial class Form1 : Form
     {
         private string outputPath;
+        private int file_list_size;
         public Form1()
         {
             InitializeComponent();
@@ -55,14 +56,26 @@ namespace TsvMerger
 
         private void merge_files_Click(object sender, EventArgs e)
         {
+            file_list_size = file_list.Items.Count;
+
+            if (file_list_size < 2)
+            {
+                MessageBox.Show("Please select two or more datasets to merge.");
+                return;
+            }
+
             if (string.IsNullOrEmpty(outputPath))
             {
                 MessageBox.Show("Please select a location to save the merged file.");
                 return;
             }
 
-            progress_bar.Maximum = file_list.Items.Count; // Total number of files
-            progress_bar.Value = progress_bar.Minimum; // Reset the progress bar
+            progress_bar.Maximum = file_list_size;
+            progress_bar.Value = progress_bar.Minimum;
+
+            long initialMemoryUsage = GC.GetTotalMemory(false); // Memory usage before merge
+            int totalInputLines = 0; // Total lines in input files
+            int totalOutputLines = 0; // Total lines in output file
 
             try
             {
@@ -70,10 +83,9 @@ namespace TsvMerger
                 {
                     bool headerWritten = false;
 
-                    foreach (string filePath in file_list.Items) // Assuming the file paths are stored in a ListBox
+                    foreach (string filePath in file_list.Items)
                     {
                         bool isCompressed = filePath.EndsWith(".gz");
-
                         using (Stream fileStream = File.OpenRead(filePath))
                         {
                             Stream stream = isCompressed ? (Stream)new GZipStream(fileStream, CompressionMode.Decompress) : fileStream;
@@ -97,15 +109,35 @@ namespace TsvMerger
                                     else
                                     {
                                         writer.WriteLine(line); // Write data rows
+                                        totalInputLines++; // Counting input lines
                                     }
                                 }
                             }
                         }
-                        progress_bar.PerformStep(); //Increment progress bar based on number of files processed
+                        progress_bar.PerformStep();
                     }
                 }
 
-                MessageBox.Show("Files merged successfully!");
+                // Reading output file to count lines
+                using (StreamReader reader = new StreamReader(outputPath))
+                {
+                    while (reader.ReadLine() != null)
+                    {
+                        totalOutputLines++;
+                    }
+                }
+
+                long finalMemoryUsage = GC.GetTotalMemory(true); // Memory usage after merge
+                long memoryUsed = finalMemoryUsage - initialMemoryUsage;
+
+                // Data integrity check
+                bool isDataIntegrityMaintained = (totalOutputLines - 1) == totalInputLines; // Subtracting 1 for the header line
+
+                // Displaying summary
+                MessageBox.Show($"Files merged successfully!\n\n" +
+                                $"Files Processed: {file_list_size}\n" +
+                                $"Data Integrity: {(isDataIntegrityMaintained ? "Maintained" : "Issues Detected")}\n" +
+                                $"Memory Used: {memoryUsed} bytes");
             }
             catch (Exception ex)
             {

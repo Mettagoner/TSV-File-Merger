@@ -107,9 +107,9 @@
             this.ownership_label.AutoSize = true;
             this.ownership_label.Location = new System.Drawing.Point(99, 425);
             this.ownership_label.Name = "ownership_label";
-            this.ownership_label.Size = new System.Drawing.Size(35, 13);
+            this.ownership_label.Size = new System.Drawing.Size(62, 13);
             this.ownership_label.TabIndex = 8;
-            this.ownership_label.Text = "label2";
+            this.ownership_label.Text = "Created By:";
             // 
             // Form1
             // 
